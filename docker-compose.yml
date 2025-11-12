@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  fakesnow:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: fakesnow:latest
+    container_name: fakesnow-server
+    ports:
+      - "8080:8080"  # Map host port 8080 to container port 8080
+    environment:
+      - FAKESNOW_PORT=8080
+      - FAKESNOW_HOST=0.0.0.0
+      - FAKESNOW_DB_PATH=/app/databases  # Persistent database storage
+    volumes:
+      # Mount local directory for database persistence
+      - ./databases:/app/databases
+      # Mount local logs directory (optional)
+      - ./logs:/app/logs
+    networks:
+      - fakesnow-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/session", "||", "test", "$$?", "-eq", "22"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: Add a database browser/admin interface
+  # adminer:
+  #   image: adminer
+  #   container_name: fakesnow-adminer
+  #   ports:
+  #     - "8081:8080"
+  #   networks:
+  #     - fakesnow-network
+  #   depends_on:
+  #     - fakesnow
+
+networks:
+  fakesnow-network:
+    driver: bridge
+    name: fakesnow-net
+
+volumes:
+  fakesnow-data:
+    driver: local
+    name: fakesnow-databases
