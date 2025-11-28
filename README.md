@@ -271,3 +271,99 @@ For more detail see the [test suite](tests/).
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for instructions on getting started with development and contributing to this project.
+
+---
+
+## Docker Setup and Usage
+
+For detailed Docker setup instructions, see [README-docker.md](README-docker.md)
+
+### Quick Start with Docker
+
+```bash
+# Start FakeSnow server
+docker-compose up -d
+
+# Check logs
+docker-compose logs fakesnow
+
+# Stop server
+docker-compose down
+```
+
+### Interactive CLI Usage
+
+```bash
+# Copy CLI script to container
+docker cp db-cli.py fakesnow-server:/app/
+
+# Run interactive CLI
+docker exec -it fakesnow-server python /app/db-cli.py
+```
+
+### Database Setup Examples
+
+```bash
+# Setup your project database and schema
+docker exec fakesnow-server python /app/setup-project.py
+
+# Create dimChannel table
+docker exec fakesnow-server python /app/setup-dimchannel.py
+```
+
+### Connection Details
+
+Connect to FakeSnow from your application:
+
+```
+SNOWFLAKE_ACCOUNT=fakesnow
+SNOWFLAKE_USERNAME=fake
+SNOWFLAKE_PASSWORD=snow
+SNOWFLAKE_DATABASE=SUPER_ORDINARY_DEV
+SNOWFLAKE_WAREHOUSE=COMPUTE_WH_DEV
+SNOWFLAKE_ROLE=Super_Ordinary_Dev
+SNOWFLAKE_HOST=localhost
+SNOWFLAKE_PORT=8080
+SNOWFLAKE_PROTOCOL=http
+```
+
+### Important Notes for FakeSnow
+
+**Unsupported Snowflake Features:**
+- `IDENTITY` columns - use regular `INTEGER` and manage IDs in your application
+- `AUTOINCREMENT` - not supported
+- `CREATE SEQUENCE` - not supported
+- `CREATE WAREHOUSE` / `USE WAREHOUSE` - these commands fail but don't affect functionality
+- `CREATE ROLE` / `GRANT` - access control not implemented
+- Some advanced Snowflake functions
+
+**Workarounds:**
+- For auto-incrementing IDs, use `MAX(id) + 1` or `ROW_NUMBER()` in your queries
+- See `dimchannel-queries.sql` for examples
+
+**Example - Creating Tables:**
+
+```sql
+-- ❌ This won't work in FakeSnow (IDENTITY not supported):
+CREATE TABLE example (
+    id INTEGER IDENTITY(1,1),
+    name VARCHAR
+);
+
+-- ✅ Use this instead:
+CREATE TABLE example (
+    id INTEGER,
+    name VARCHAR
+);
+
+-- Generate IDs in your application or use:
+INSERT INTO example 
+SELECT COALESCE(MAX(id), 0) + 1, 'New Item' 
+FROM example;
+```
+
+For more examples, see:
+- `setup-project.py` - Database and schema setup
+- `setup-dimchannel.py` - Table creation example
+- `dimchannel-queries.sql` - SQL query examples
+- `FAKESNOW-SDK-WRAPPER-SPEC.md` - TypeScript/Node.js integration guide
